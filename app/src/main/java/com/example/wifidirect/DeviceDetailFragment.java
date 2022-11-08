@@ -1,6 +1,7 @@
 package com.example.wifidirect;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.net.wifi.WpsInfo;
@@ -8,7 +9,9 @@ import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +21,14 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class DeviceDetailFragment extends Fragment implements WifiP2pManager.ConnectionInfoListener {
 
@@ -95,7 +106,90 @@ public class DeviceDetailFragment extends Fragment implements WifiP2pManager.Con
         }
         this.info = wifiP2pInfo;
         this.getView().setVisibility(View.VISIBLE);
-        // the owner ip is not known
 
+        // the owner ip is not known
+        TextView view = (TextView) mContentView.findViewById(R.id.group_owner);
+        view.setText(getResources().getString(R.string.group_owner_text)
+                + ((info.isGroupOwner == true) ? getResources().getString(R.string.yes)
+                : getResources().getString(R.string.no)));
+
+        // InetAddress from WifiP2pInfo struct
+        view = (TextView) mContentView.findViewById(R.id.device_info);
+        view.setText("Group owner IP - " + info.groupOwnerAddress.getHostAddress());
+
+        // After the group negotiation, we assign the group owner as the file
+        // server. The file server is single threaded, single connection server
+        // socket.
+        if (info.groupFormed && info.isGroupOwner) {
+            new FileService()
+        }
+    }
+
+
+    /**
+     * A simple server socket that accepts connection and writes some data on
+     * the stream.
+     */
+    public static class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
+        private Context context;
+        private TextView statusText;
+
+        public FileServerAsyncTask(Context context, View statusText) {
+            this.context = context;
+            this.statusText = (TextView) statusText;
+        }
+
+        @Override
+        protected String doInBackground(Void... voids) {
+            try {
+                ServerSocket serverSocket = new ServerSocket(8988);
+                Log.d(TAG, "doInBackground: Server: socket opened");
+                Socket client = serverSocket.accept();
+                Log.d(TAG, "doInBackground: Server: connection done");
+                final File f = new File(Environment.getExternalStorageDirectory() + "/"
+                        + context.getPackageName() + "/wifip2pshared-" + System.currentTimeMillis()
+                        + ".jpg");
+                File dirs = new File(f.getParent());
+                if (!dirs.exists()) {
+                    dirs.mkdirs();
+                    f.createNewFile();
+                }
+                Log.d(TAG, "doInBackground: server: copying files " + f.toString());
+                InputStream inputStream = client.getInputStream();
+                copyFile(inputStream, new FileOutputStream(f));
+                serverSocket.close();
+                return f.getAbsolutePath();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            if (result != null) {
+                Log.d(TAG, "onPostExecute: ");
+                statusText.setText("File copied - " +result);
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_VIEW);
+                intent.setDataAndType(Uri.parse("file://" + result), "image/*");
+                context.startActivity(intent);
+            }
+        }
+    }
+
+    public static boolean copyFile(InputStream inputStream, OutputStream outputStream) {
+        byte buf[] = new byte[1024];
+        int len;
+        try {
+            while ((len = inputStream.read(buf)) != -1) {
+                outputStream.write(buf, 0, len);
+            }
+            outputStream.close();
+            inputStream.close();
+        } catch (IOException e) {
+            Log.d(TAG, "copyFile: " +e.toString());
+            return false;
+        }
+        return true;
     }
 }
