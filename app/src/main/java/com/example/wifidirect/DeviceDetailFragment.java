@@ -121,8 +121,42 @@ public class DeviceDetailFragment extends Fragment implements WifiP2pManager.Con
         // server. The file server is single threaded, single connection server
         // socket.
         if (info.groupFormed && info.isGroupOwner) {
-            new FileService()
+            new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
+                    .execute();
+        } else if (info.groupFormed) {
+            // The other device acts as the client. In this case, we enable the
+            // get file button.
+            mContentView.findViewById(R.id.btn_start_client).setVisibility(View.VISIBLE);
+            ((TextView) mContentView.findViewById(R.id.status_text)).setText(getResources()
+                    .getString(R.string.client_text));
+
         }
+        // hide connect button
+        mContentView.findViewById(R.id.btn_connect).setVisibility(View.GONE);
+    }
+
+    public void showDetails(WifiP2pDevice device) {
+        this.device = device;
+        this.getView().setVisibility(View.VISIBLE);
+        TextView view = (TextView) mContentView.findViewById(R.id.device_address);
+        view.setText(device.deviceAddress);
+        view = (TextView) mContentView.findViewById(R.id.device_info);
+        view.setText(device.toString());
+    }
+
+    public void resetViews() {
+        mContentView.findViewById(R.id.btn_connect).setVisibility(View.VISIBLE);
+        TextView view = (TextView) mContentView.findViewById(R.id.device_address);
+        view.setText(R.string.empty);
+        view = mContentView.findViewById(R.id.device_info);
+        view.setText(R.string.empty);
+        view = mContentView.findViewById(R.id.group_owner);
+        view.setText(R.string.empty);
+        view = mContentView.findViewById(R.id.status_text);
+        view.setText(R.string.empty);
+        mContentView.findViewById(R.id.btn_start_client).setVisibility(View.GONE);
+        this.getView().setVisibility(View.GONE);
+
     }
 
 
@@ -161,6 +195,7 @@ public class DeviceDetailFragment extends Fragment implements WifiP2pManager.Con
                 return f.getAbsolutePath();
             } catch (IOException e) {
                 e.printStackTrace();
+                return null;
             }
         }
 
@@ -174,6 +209,11 @@ public class DeviceDetailFragment extends Fragment implements WifiP2pManager.Con
                 intent.setDataAndType(Uri.parse("file://" + result), "image/*");
                 context.startActivity(intent);
             }
+        }
+
+        @Override
+        protected void onPreExecute() {
+            Log.d(TAG, "onPreExecute: Opening a service socket");
         }
     }
 
