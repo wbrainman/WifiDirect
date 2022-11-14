@@ -67,8 +67,10 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
     }
 
     public void resetData() {
-        DeviceListFragment listFragment = (DeviceListFragment) getFragmentManager() .findFragmentById(R.id.frag_list);
-        DeviceDetailFragment fragmentDetails = (DeviceDetailFragment) getFragmentManager().findFragmentById(R.id.frag_detail);
+        DeviceListFragment listFragment = (DeviceListFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.frag_list);
+        DeviceDetailFragment fragmentDetails = (DeviceDetailFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.frag_detail);
         if (listFragment != null) {
             listFragment.clearPeers();
         }
@@ -90,6 +92,7 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
         switch (item.getItemId()) {
             case R.id.atn_direct_enable:
                 if (manager != null && channel != null) {
+                    Log.d(TAG, "onOptionsItemSelected: atn_direct_enable");
                     startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS));
                 } else {
                     Log.e(TAG, "onOptionsItemSelected: channel or manager is null");
@@ -101,19 +104,20 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
                             Toast.LENGTH_SHORT).show();
                     return true;
                 }
-                final DeviceListFragment fragment = (DeviceListFragment) getFragmentManager()
+                final DeviceListFragment fragment = (DeviceListFragment) getSupportFragmentManager()
                         .findFragmentById(R.id.frag_list);
                 fragment.onInitiateDiscovery();
                 manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
                     @Override
                     public void onSuccess() {
-                        Toast.makeText(this, "Discovery Initialed",
+                        Toast.makeText(MainActivity.this, "Discovery Initialed",
                                 Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFailure(int i) {
-                        Toast.makeText(this, "Discovery Failed" + i, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Discovery Failed" + i,
+                                Toast.LENGTH_SHORT).show();
                     }
                 });
                 return true;
@@ -124,7 +128,8 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
 
     @Override
     public void showDetails(WifiP2pDevice device) {
-        DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager().findFragmentById(R.id.frag_detail);
+        DeviceDetailFragment fragment = (DeviceDetailFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.frag_detail);
         fragment.showDetails(device);
     }
 
@@ -133,19 +138,19 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
         manager.connect(channel, config, new ActionListener() {
             @Override
             public void onSuccess() {
-
+                Log.d(TAG, "connect onSuccess: ");
             }
 
             @Override
             public void onFailure(int i) {
-                Toast.makeText(this, "Connect failed, Retry.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Connect failed, Retry.", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     @Override
     public void disconnect() {
-        final DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager().findFragmentById(R.id.frag_detail);
+        final DeviceDetailFragment fragment = (DeviceDetailFragment) getSupportFragmentManager().findFragmentById(R.id.frag_detail);
         fragment.resetViews();
         manager.removeGroup(channel, new ActionListener() {
             @Override
@@ -177,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
     @Override
     public void cancelDisconnect() {
        if (manager != null) {
-           final DeviceListFragment fragment = (DeviceListFragment) getFragmentManager()
+           final DeviceListFragment fragment = (DeviceListFragment) getSupportFragmentManager()
                    .findFragmentById(R.id.frag_list);
            if (fragment.getDevice() == null
                    || fragment.getDevice().status == WifiP2pDevice.CONNECTED) {
@@ -187,12 +192,12 @@ public class MainActivity extends AppCompatActivity implements ChannelListener, 
                 manager.cancelConnect(channel, new ActionListener() {
                     @Override
                     public void onSuccess() {
-                        Toast.makeText(this, "Abort connection", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Abort connection", Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFailure(int i) {
-                        Toast.makeText(this, "Connect abort request failed. reson " + i,
+                        Toast.makeText(MainActivity.this, "Connect abort request failed. reson " + i,
                                 Toast.LENGTH_SHORT).show();
                     }
                 });
